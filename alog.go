@@ -40,12 +40,8 @@ func New(w io.Writer) *Alog {
 // the caller from being blocked.
 func (al Alog) Start() {
 	for {
-		select {
-
-		case msg := <-al.msgCh:
-			go al.write(msg, nil)
-		}
-
+		msg := <-al.msgCh
+		go al.write(msg, nil)
 	}
 }
 
@@ -58,14 +54,13 @@ func (al Alog) formatMessage(msg string) string {
 
 func (al Alog) write(msg string, wg *sync.WaitGroup) {
 	al.m.Lock()
+	defer al.m.Unlock()
 	_, err := al.Write(msg)
 	if err != nil {
-		// go func(){
+		go func(err error) {
 			al.errorCh <- err
-		// }()
-		
+		}(err)
 	}
-	al.m.Unlock()
 }
 
 func (al Alog) shutdown() {
